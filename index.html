@@ -585,7 +585,7 @@
   async function loadData() {
     let json;
     try {
-      const res = await fetch('./scores.json');
+      const res = await fetch('./scores/scores.json');
       if (!res.ok) throw new Error();
       json = await res.json();
     } catch {
