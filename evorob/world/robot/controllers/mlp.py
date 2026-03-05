@@ -30,14 +30,14 @@ class NeuralNetworkController(Controller):
         # - self.input_to_hidden: shape (hidden_size, input_size)
         # - self.hidden_to_output: shape (output_size, hidden_size)
         # Hint: Use np.random.uniform(-1, 1, (rows, cols))
-        self.input_to_hidden = ...  # TODO!
-        self.hidden_to_output = ...  # TODO!
+        self.input_to_hidden = np.random.uniform(-1, 1, (self.n_hidden, self.n_input))  # TODO!
+        self.hidden_to_output = np.random.uniform(-1, 1, (self.n_output, self.n_hidden))  # TODO!
 
         # TODO: Compute number of parameters in each layer
         # - self.n_params_i2h = input_size * hidden_size
         # - self.n_params_h2o = hidden_size * output_size
-        self.n_params_i2h = ...  # TODO!
-        self.n_params_h2o = ...  # TODO!
+        self.n_params_i2h = self.n_input * self.n_hidden  # TODO!
+        self.n_params_h2o = self.n_hidden * self.n_output  # TODO!
 
         self.n_params = self.get_num_params()
 
@@ -59,6 +59,10 @@ class NeuralNetworkController(Controller):
         # Hint: Use @ operator or np.matmul for matrix multiplication
         # Hint: .T transposes a matrix
         # Hint: np.tanh() applies tanh element-wise
+        hidden = np.tanh(state @ self.input_to_hidden.T)
+        output = np.tanh(hidden @ self.hidden_to_output.T)
+        action = np.clip(output, -1, 1)
+        return action
         raise NotImplementedError("TODO: Implement forward pass")
 
     def set_weights(self, encoding):
@@ -85,6 +89,7 @@ class NeuralNetworkController(Controller):
         # To provide a genetic encoding for our neural network controller,
         # we compute and store the number of parameters in our NN class.
         # TODO: Return sum of parameters in both layers!
+        return self.n_params_i2h + self.n_params_h2o
         raise NotImplementedError
 
     def reset_controller(self, batch_size=1) -> None:
