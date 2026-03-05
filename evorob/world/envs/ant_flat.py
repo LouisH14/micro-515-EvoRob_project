@@ -115,7 +115,16 @@ class AntFlatEnvironment(MujocoEnv):
         # 3. ctrl_cost = ...
         # Final reward is the sum of these three components.
         # Return: (reward, reward_info_dict)
-        raise NotImplementedError("TODO: Implement reward function")
+        forward_reward = x_velocity
+        healthy_reward = 1.0 if not self._get_termination() else 0.0
+        ctrl_cost = 0.1 * np.sum(np.square(action))
+        reward = forward_reward + healthy_reward - ctrl_cost
+        reward_info = {
+            "forward_reward": forward_reward,
+            "healthy_reward": healthy_reward,
+            "ctrl_cost": ctrl_cost,
+        }
+        return reward, reward_info
 
     def _get_termination(self):
         # TODO: Robot should terminate when:
