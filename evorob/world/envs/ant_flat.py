@@ -106,7 +106,7 @@ class AntFlatEnvironment(MujocoEnv):
         # Hint: Use np.concatenate() to combine both arrays
         position = self.data.qpos[2:].flatten()
         velocity = self.data.qvel.flatten()
-        return np.concatenate(position, velocity)
+        return np.concatenate((position, velocity))
 
     def _get_rew(self, x_velocity: float, action):
         # TODO: Implement reward function with three components:
@@ -120,9 +120,9 @@ class AntFlatEnvironment(MujocoEnv):
         ctrl_cost = 0.1 * np.sum(np.square(action))
         reward = forward_reward + healthy_reward - ctrl_cost
         reward_info = {
-            "forward_reward": forward_reward,
-            "healthy_reward": healthy_reward,
-            "ctrl_cost": ctrl_cost,
+            "reward_forward": forward_reward,
+            "reward_survive": healthy_reward,
+            "reward_ctrl": ctrl_cost,
         }
         return reward, reward_info
 
@@ -132,4 +132,4 @@ class AntFlatEnvironment(MujocoEnv):
         # Return True if NOT healthy (i.e., should terminate)
         # Hint: Use self.state_vector() to get current state.
         height = self.state_vector()[2]
-        return (height < 0.26 | height > 1.0)
+        return (height < 0.26 or height > 1.0)
