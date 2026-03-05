@@ -131,4 +131,5 @@ class AntFlatEnvironment(MujocoEnv):
         # - Torso height is below 0.26 or above 1.0
         # Return True if NOT healthy (i.e., should terminate)
         # Hint: Use self.state_vector() to get current state.
-        raise NotImplementedError("TODO: Implement termination function")
+        height = self.state_vector()[2]
+        return (height < 0.26 | height > 1.0)
