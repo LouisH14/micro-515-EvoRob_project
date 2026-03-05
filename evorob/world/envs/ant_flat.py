@@ -104,7 +104,9 @@ class AntFlatEnvironment(MujocoEnv):
         # - velocity: self.data.qvel.flatten() (14 values)
         # This gives 27 total dimensions, making the task translation-invariant
         # Hint: Use np.concatenate() to combine both arrays
-        raise NotImplementedError("TODO: Implement observation function")
+        position = self.data.qpos[2:].flatten()
+        velocity = self.data.qvel.flatten()
+        return np.concatenate(position, velocity)
 
     def _get_rew(self, x_velocity: float, action):
         # TODO: Implement reward function with three components:
