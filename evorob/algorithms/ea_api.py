@@ -1,6 +1,7 @@
 import numpy as np
 
 from evorob.algorithms.base_ea import EA
+import cma  # Example EA framework (CMA-ES). You can choose any other framework you like.
 
 
 class EvoAlgAPI(EA):
@@ -16,8 +17,14 @@ class EvoAlgAPI(EA):
     - EvoJAX: https://github.com/google/evojax
     """
 
-    def __init__(self, n_params: int, population_size: int = 100, num_generations: int = 100,
-                 output_dir: str = "./results/EA", **kwargs):
+    def __init__(
+        self,
+        n_params: int,
+        population_size: int = 100,
+        num_generations: int = 100,
+        output_dir: str = "./results/EA",
+        **kwargs,
+    ):
         """Initialize the evolutionary algorithm.
 
         Args:
@@ -31,7 +38,11 @@ class EvoAlgAPI(EA):
         self.n_params = n_params
         self.n_gen = num_generations
         self.population_size = population_size
-        
+
+        self.es = cma.CMAEvolutionStrategy(
+            self.n_params * [0], 0.5, {"popsize": self.population_size}
+        )
+
         # % bookkeeping for base EA
         self.directory_name = output_dir
         self.current_gen = 0
@@ -42,11 +53,11 @@ class EvoAlgAPI(EA):
         self.x = None
         self.f = None
 
-        raise NotImplementedError(
-            "TODO: Initialize your chosen EA framework.\n"
-            "Recommended: pip install cma, then import cma and create CMAEvolutionStrategy.\n"
-            "See https://github.com/CMA-ES/pycma for documentation."
-        )
+        # raise NotImplementedError(
+        #     "TODO: Initialize your chosen EA framework.\n"
+        #     "Recommended: pip install cma, then import cma and create CMAEvolutionStrategy.\n"
+        #     "See https://github.com/CMA-ES/pycma for documentation."
+        # )
 
     def ask(self) -> np.ndarray:
         """Sample population from the algorithm.
@@ -58,12 +69,19 @@ class EvoAlgAPI(EA):
         # TODO: Get new population from your EA
         # Make sure the returned array has shape (population_size, n_params)
 
+        return self.es.ask()
+
         raise NotImplementedError(
             "TODO: Implement ask() to sample new population.\n"
             "This should return an array of shape (population_size, n_params)."
         )
 
-    def tell(self, population: np.ndarray, fitnesses: np.ndarray, save_checkpoint: bool = False) -> None:
+    def tell(
+        self,
+        population: np.ndarray,
+        fitnesses: np.ndarray,
+        save_checkpoint: bool = False,
+    ) -> None:
         """Update the algorithm with evaluated population.
 
         Args:
@@ -75,22 +93,24 @@ class EvoAlgAPI(EA):
         # TODO: Update your EA with the evaluated population
         # Note: Some algorithms minimize, others maximize.
         # Adjust accordingly (negate fitnesses if needed).
-        
+
         # After updating the EA, do bookkeeping for checkpointing:
         self.full_f.append(fitnesses)
         self.full_x.append(population)
         self.f = fitnesses
         self.x = population
-        
+
         # Track best individual
         best_idx = np.argmax(fitnesses)
         if fitnesses[best_idx] > self.f_best_so_far:
             self.f_best_so_far = fitnesses[best_idx]
             self.x_best_so_far = population[best_idx].copy()
-        
+
         if save_checkpoint:
             self.save_checkpoint()
         self.current_gen += 1
+
+        return self.es.tell(population, fitnesses)
 
         raise NotImplementedError(
             "TODO: Implement tell() to update the EA.\n"
