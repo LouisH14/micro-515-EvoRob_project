@@ -60,10 +60,10 @@ class NeuralNetworkController(Controller):
         # Hint: Use @ operator or np.matmul for matrix multiplication
         # Hint: .T transposes a matrix
         # Hint: np.tanh() applies tanh element-wise
-        hidden = np.tanh(self.input_to_hidden @ state)  # TODO!
+        hidden = np.tanh(self.input_to_hidden @ state.T)  # TODO!
         output = np.tanh(self.hidden_to_output @ hidden)  # TODO!
         action = np.clip(output, -1, 1)  # TODO!
-        return action
+        return action.T
         raise NotImplementedError("TODO: Implement forward pass")
 
     def set_weights(self, encoding):
