@@ -39,8 +39,9 @@ class EvoAlgAPI(EA):
         self.n_gen = num_generations
         self.population_size = population_size
 
+        x0 = np.random.uniform(-0.2, 0.2, n_params)  # Initial solution (can be random or fixed)
         self.es = cma.CMAEvolutionStrategy(
-            self.n_params * [0], 0.5, {"popsize": self.population_size}
+            x0, 0.3, {"popsize": self.population_size}
         )
 
         # % bookkeeping for base EA

@@ -437,7 +437,7 @@ if __name__ == "__main__":
     # Uncomment to run full evolution:
     run_evolution_neural_controller(
         num_generations=100,
-        population_size=10,
+        population_size=200,
         ckpt_interval=5,
         checkpoint_path=None,
         run_evaluation=True,
