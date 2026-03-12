@@ -69,7 +69,7 @@ class EvoAlgAPI(EA):
         # TODO: Get new population from your EA
         # Make sure the returned array has shape (population_size, n_params)
 
-        return self.es.ask()
+        return np.array(self.es.ask())
 
         raise NotImplementedError(
             "TODO: Implement ask() to sample new population.\n"
