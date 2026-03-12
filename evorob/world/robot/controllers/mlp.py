@@ -30,15 +30,18 @@ class NeuralNetworkController(Controller):
         # - self.input_to_hidden: shape (hidden_size, input_size)
         # - self.hidden_to_output: shape (output_size, hidden_size)
         # Hint: Use np.random.uniform(-1, 1, (rows, cols))
-        self.input_to_hidden = ...  # TODO!
-        self.hidden_to_output = ...  # TODO!
+        self.input_to_hidden = np.random.uniform(
+            -1, 1, (self.n_hidden, self.n_input)
+        )  # TODO!
+        self.hidden_to_output = np.random.uniform(
+            -1, 1, (self.n_output, self.n_hidden)
+        )  # TODO!
 
         # TODO: Compute number of parameters in each layer
-        self.n_params_i2h = ...  # TODO!
-        self.n_params_h2o = ...  # TODO!
+        self.n_params_i2h = self.input_to_hidden.size  # TODO!
+        self.n_params_h2o = self.hidden_to_output.size  # TODO!
 
         self.n_params = self.get_num_params()
-
 
     def get_action(self, state):
         """Forward pass through the network.
@@ -57,6 +60,10 @@ class NeuralNetworkController(Controller):
         # Hint: Use @ operator or np.matmul for matrix multiplication
         # Hint: .T transposes a matrix
         # Hint: np.tanh() applies tanh element-wise
+        hidden = np.tanh(self.input_to_hidden @ state)  # TODO!
+        output = np.tanh(self.hidden_to_output @ hidden)  # TODO!
+        action = np.clip(output, -1, 1)  # TODO!
+        return action
         raise NotImplementedError("TODO: Implement forward pass")
 
     def set_weights(self, encoding):
@@ -73,7 +80,14 @@ class NeuralNetworkController(Controller):
         #
         # Hint: Use array slicing: encoding[:n] and encoding[n:]
         # Hint: Use np.reshape(array, (rows, cols)) or array.reshape((rows, cols))
-        raise NotImplementedError("TODO: Implement weight setting")
+        self.input_to_hidden = encoding[: self.n_params_i2h].reshape(
+            (self.n_hidden, self.n_input)
+        )
+        self.hidden_to_output = encoding[self.n_params_i2h :].reshape(
+            (self.n_output, self.n_hidden)
+        )
+
+        # raise NotImplementedError("TODO: Implement weight setting")
 
     def geno2pheno(self, genotype):
         """Alias for set_weights (genotype to phenotype mapping)."""
@@ -83,6 +97,7 @@ class NeuralNetworkController(Controller):
         # To provide a genetic encoding for our neural network controller,
         # we compute and store the number of parameters in our NN class.
         # TODO: Return the total number of parameters in both layers!
+        return self.n_params_i2h + self.n_params_h2o  # TODO!
         raise NotImplementedError
 
     def reset_controller(self, batch_size=1) -> None:
