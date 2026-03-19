@@ -10,6 +10,8 @@
 #SBATCH --partition=academic                     # Partition to submit to academic partition
 #SBATCH --account=micro-515                      # Account name
 
+export MUJOCO_GL=egl
+
 # Activate virtual environment
  source .venv/bin/activate
 
