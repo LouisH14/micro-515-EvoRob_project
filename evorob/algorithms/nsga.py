@@ -276,27 +276,25 @@ class NSGAII(EA):
 
     def dominates(self, individual: np.ndarray, other_individual: np.ndarray) -> bool:
         """Checks if one solution dominates another (for maximization).
-        
+
         Solution A dominates solution B if:
         - A is at least as good as B in all objectives
         - A is strictly better than B in at least one objective
-        
+
         Args:
             individual: Objective values of first solution.
             other_individual: Objective values of second solution.
-            
+
         Returns:
             bool: True if individual dominates other_individual.
         """
-        # Use all() and any() to check the two conditions for dominance
-
-        # Check it is at least as good:
-        least_as_good = np.all(individual >= other_individual)
-
-        # Check strictly better:
-        strictly_better = np.any(individual > other_individual)
-
-        return least_as_good and strictly_better
+        at_least_as_good = all(
+            x >= y for x, y in zip(individual, other_individual)
+        )
+        strictly_better = any(
+            x > y for x, y in zip(individual, other_individual)
+        )
+        return at_least_as_good and strictly_better
     
 
     def fast_nondominated_sort(self, fitness: np.ndarray) -> Tuple[List[List[int]], List[int]]:
