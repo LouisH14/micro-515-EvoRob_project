@@ -390,7 +390,18 @@ class NSGAII(EA):
         # 1. Sort the front by that objective
         # 2. Assign infinite distance to boundary solutions
         # 3. Compute normalized distance for interior solutions
-        
+        for obj in range(n_objectives):
+            # Sort the front by the current objective
+            sorted_indices = np.argsort(fitness[front, obj])
+            # Assign infinite distance to boundary solutions
+            distance[sorted_indices[0]] = np.inf
+            distance[sorted_indices[-1]] = np.inf
+            # Compute normalized distance for interior solutions
+            for i in range(1, n_solutions - 1):
+                distance[sorted_indices[i]] = (fitness[front[sorted_indices[i + 1]], obj] - fitness[front[sorted_indices[i - 1]], obj]) / (np.max(fitness[:, obj]) - np.min(fitness[:, obj]) + 1e-8)
+       
+        return distance
+    
         raise NotImplementedError(
             "TODO: Implement crowding distance calculation.\n"
             "See Exercise 2c in challenge2.md for guidance."
@@ -417,6 +428,16 @@ class NSGAII(EA):
         # TODO: Compare two individuals
         # 1. Prefer lower rank (better Pareto front)
         # 2. If same rank, prefer larger crowding distance
+
+        if population_rank[individual_idx] < population_rank[other_individual_idx]:
+            return individual_idx
+        elif population_rank[individual_idx] > population_rank[other_individual_idx]:
+            return other_individual_idx
+        else:
+            if crowding_distances[individual_idx] > crowding_distances[other_individual_idx]:
+                return individual_idx
+            else:
+                return other_individual_idx
         
         raise NotImplementedError(
             "TODO: Implement crowding operator.\n"
