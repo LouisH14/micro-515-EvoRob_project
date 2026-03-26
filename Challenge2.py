@@ -1,6 +1,7 @@
 import os
+os.environ["MUJOCO_GL"] = "wgl" # windows replacement
+# os.environ.setdefault("MUJOCO_GL", "egl") 
 
-os.environ.setdefault("MUJOCO_GL", "egl")
 
 from datetime import datetime
 from pathlib import Path

@@ -327,12 +327,14 @@ class NSGAII(EA):
                 # does individual_a dominate individual_b?
                 if self.dominates(fitness[individual_a], fitness[individual_b]):
                     # TODO: Track that individual_a dominates individual_b
-                    pass  # Replace with your code
+                    domination_lists[individual_a].append(individual_b)
+                    domination_counts[individual_b] += 1
 
                 # does individual_b dominate individual_a?
                 elif self.dominates(fitness[individual_b], fitness[individual_a]):
                     # TODO: Track that individual_a is dominated by individual_b
-                    pass  # Replace with your code
+                    domination_lists[individual_b].append(individual_a)
+                    domination_counts[individual_a] += 1
 
             # if solution dominates all
             if domination_counts[individual_a] == 0:
@@ -354,7 +356,15 @@ class NSGAII(EA):
                 for individual_b in domination_lists[individual_a]:
                     # TODO: Update domination count and check if individual_b
                     # should be added to the next front
-                    pass  # Replace with your code
+                    # Decrease domination count
+                    domination_counts[individual_b] -= 1
+
+                    # If individual_b is no longer dominated, add to next front
+                    if domination_counts[individual_b] == 0:
+                        next_front.append(individual_b)
+
+                        # Assign its front number
+                        population_rank[individual_b] = i + 1  # i is the current front index
 
             i += 1
 
