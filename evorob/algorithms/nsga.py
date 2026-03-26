@@ -473,25 +473,3 @@ class NSGAII(EA):
             best_idx = winner_idx
 
         return best_idx
-    
-    def dominates(self, individual: np.ndarray, other_individual: np.ndarray) -> bool:
-        """Checks if one solution dominates another (for maximization).
-
-        Solution A dominates solution B if:
-        - A is at least as good as B in all objectives
-        - A is strictly better than B in at least one objective
-
-        Args:
-            individual: Objective values of first solution.
-            other_individual: Objective values of second solution.
-
-        Returns:
-            bool: True if individual dominates other_individual.
-        """
-        at_least_as_good = all(
-            x >= y for x, y in zip(individual, other_individual)
-        )
-        strictly_better = any(
-            x > y for x, y in zip(individual, other_individual)
-        )
-        return at_least_as_good and strictly_better
