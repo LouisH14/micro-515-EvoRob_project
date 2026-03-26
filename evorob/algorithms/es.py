@@ -9,8 +9,8 @@ ES_opts = {
     "num_parents": 16,
     "num_generations": 100,
     "mutation_sigma": 0.3,
-    "min_sigma": 0.1,
-    "sigma_decay_rate": 0.95
+    "min_sigma": 0.05, # 0.1,
+    "sigma_decay_rate": 0.85 #0.95
 }
 
 
@@ -35,7 +35,7 @@ class ES(EA):
         self.max = opts["max"]
 
         self.current_gen = 0
-        self.current_mean = [(self.min + self.max) / 2]*self.n_params
+        self.current_mean = np.full(self.n_params, (self.min + self.max) / 2)
         self.current_sigma = opts["mutation_sigma"]
         self.min_sigma = opts["min_sigma"]
         self.sigma_decay_rate = opts["sigma_decay_rate"]
@@ -51,7 +51,7 @@ class ES(EA):
         self.f = None
 
     def ask(self):
-        if self.current_gen==0:
+        if self.current_gen == 0:
             new_population = self.initialise_x0()
         else:
             new_population = self.generate_mutated_offspring(self.n_pop)
@@ -65,7 +65,7 @@ class ES(EA):
         self.update_population_mean(parents_population, parents_fitness)
         self.update_sigma()
 
-        #% Some bookkeeping
+        # % Some bookkeeping
         self.full_f.append(function_values)
         self.full_x.append(solutions)
         self.x = parents_population
@@ -77,9 +77,10 @@ class ES(EA):
             self.x_best_so_far = solutions[best_index]
 
         if self.current_gen % self.log_every == 0:
+            # Use full population fitness for accurate mean reporting
             print(f"Best in generation {self.current_gen: 3d}: {function_values[best_index]:.2f}\n"
                   f"Best fitness so far   : {self.f_best_so_far:.2f}\n"
-                  f"Mean pop fitness      : {np.mean(self.f):.2f} +- {np.std(self.f):.2f}\n"
+                  f"Mean pop fitness      : {np.mean(function_values):.2f} +- {np.std(function_values):.2f}\n"
                   f"Sigma: {self.current_sigma:.2f} \n"
             )
         if save_checkpoint:
@@ -87,64 +88,52 @@ class ES(EA):
         self.current_gen += 1
 
     def initialise_x0(self):
-        """Initialises the first population."""
-        # TODO: generate the initial population mean vector (current_mean) - DONE
-        mean_vector = np.random.uniform(self.min, self.max, size=(self.n_pop, self.n_params))
-        return mean_vector
+        """
+        Initialises the first population by sampling Gaussian noise around
+        current_mean, consistent with how subsequent generations are produced.
+        """
+        perturbation = np.random.randn(self.n_pop, self.n_params) * self.current_sigma
+        initial_population = self.current_mean + perturbation
+
+        # Update current_mean from this initial population so it is meaningful
+        # before the first tell() call
+        self.current_mean = np.mean(initial_population, axis=0)
+        return initial_population
 
     def update_sigma(self):
-        """Update the perturbation strength (sigma)."""
-        # TODO: implement a decay of the sigma value over generations, ensuring it does not go below min_sigma - DONE
-        self.current_sigma *= self.sigma_decay_rate
-        self.current_sigma = max(self.current_sigma, self.min_sigma)
+        """Update the perturbation strength (sigma) with decay, floored at min_sigma."""
+        self.current_sigma = max(
+            self.current_sigma * self.sigma_decay_rate,
+            self.min_sigma
+        )
 
     def sort_and_select_parents(self, population, fitness, num_parents):
-        """Sorts the population based on fitness and selects the top individuals as parents."""
-        # TODO: sort the population and fitness based on fitness values, and select the top num_parents individuals as parents - DONE
-        # Sort indices by descending fitness
+        """Sorts the population by descending fitness and selects the top individuals as parents."""
         sorted_indices = np.argsort(fitness)[::-1]
-
-        # Reorder population and fitness
         population_sorted = population[sorted_indices]
         fitness_sorted = fitness[sorted_indices]
 
-        # Select top parents
         parent_population = population_sorted[:num_parents]
         parent_fitness = fitness_sorted[:num_parents]
 
         return parent_population, parent_fitness
 
     def update_population_mean(self, parent_population, parent_fitness):
-        # TODO: compute the new population mean as a weighted average of the parent population, where the weights are based on the parent fitness
-        # (you can use rank or raw fitness values) - DONE using raw
+        """
+        Computes the new population mean as a rank-based weighted average of
+        the parent population. Rank-based weights are robust to negative fitness
+        values and outliers, unlike raw-fitness weighting.
+        """
+        n = len(parent_fitness)
+        # Ranks: best parent gets weight n, worst gets weight 1
+        ranks = np.arange(n, 0, -1, dtype=float)
+        weights = ranks / ranks.sum()
 
-        total_fitness = np.sum(parent_fitness)
-        # Avoid divide-by-zero
-        if total_fitness == 0:
-            weights = np.ones_like(parent_fitness) / len(parent_fitness)
-        else:
-            weights = parent_fitness / total_fitness
-
-        # Weighted average across individuals (rows)
-        updated_mean_vector = weights @ parent_population
-
-        # Store new mean
-        self.current_mean = updated_mean_vector
-
-        return updated_mean_vector
+        # Weighted average across parents (rows)
+        self.current_mean = weights @ parent_population
+        return self.current_mean
 
     def generate_mutated_offspring(self, population_size):
         """Generates a new population by adding Gaussian noise to the current mean."""
-        # TODO: generate a new population by adding Gaussian noise to the current mean, where the noise is scaled by the current sigma value
-        # DONE - idk if the mutated population is correct
-
-        # Sample Gaussian noise (mean 0, std 1)
-        perturbation = np.random.randn(population_size, self.n_params)
-        
-        # Scale by sigma
-        perturbation *= self.current_sigma
-
-        mutated_population = self.current_mean + perturbation
-
-        return mutated_population
-
+        perturbation = np.random.randn(population_size, self.n_params) * self.current_sigma
+        return self.current_mean + perturbation

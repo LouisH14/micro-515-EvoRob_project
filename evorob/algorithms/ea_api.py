@@ -41,7 +41,7 @@ class EvoAlgAPI(EA):
 
         x0 = np.random.uniform(-0.2, 0.2, n_params)  # Initial solution (can be random or fixed)
         self.es = cma.CMAEvolutionStrategy(
-            x0, 0.3, {"popsize": self.population_size}
+            x0, 1.0, {"popsize": self.population_size} # Changed initial sigma from 0.3
         )
 
         # % bookkeeping for base EA
@@ -94,6 +94,8 @@ class EvoAlgAPI(EA):
         # TODO: Update your EA with the evaluated population
         # Note: Some algorithms minimize, others maximize.
         # Adjust accordingly (negate fitnesses if needed).
+         # CMA-ES minimizes by default, so negate fitnesses to maximise
+        self.es.tell(population, -fitnesses)
 
         # After updating the EA, do bookkeeping for checkpointing:
         self.full_f.append(fitnesses)
@@ -110,11 +112,3 @@ class EvoAlgAPI(EA):
         if save_checkpoint:
             self.save_checkpoint()
         self.current_gen += 1
-
-        return self.es.tell(population, fitnesses)
-
-        raise NotImplementedError(
-            "TODO: Implement tell() to update the EA.\n"
-            "Pass the population and their fitness values to update the search distribution.\n"
-            "Don't forget to add the bookkeeping code shown above for checkpointing!"
-        )
