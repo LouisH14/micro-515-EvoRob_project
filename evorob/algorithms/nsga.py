@@ -288,14 +288,16 @@ class NSGAII(EA):
         Returns:
             bool: True if individual dominates other_individual.
         """
-        # TODO: Implement Pareto dominance check
         # Use all() and any() to check the two conditions for dominance
-        
-        raise NotImplementedError(
-            "TODO: Implement dominance check.\n"
-            "Return True if 'individual' dominates 'other_individual'.\n"
-            "See Exercise 2a in challenge2.md for guidance."
-        )
+
+        # Check it is at least as good:
+        least_as_good = np.all(individual >= other_individual)
+
+        # Check strictly better:
+        strictly_better = np.any(individual > other_individual)
+
+        return least_as_good and strictly_better
+    
 
     def fast_nondominated_sort(self, fitness: np.ndarray) -> Tuple[List[List[int]], List[int]]:
         """Performs fast non-dominated sorting to rank solutions into Pareto fronts.
