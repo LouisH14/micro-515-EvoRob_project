@@ -4,7 +4,7 @@
   ],
   "teams": [
     { "team": "A-GROUPA",            "challenge1": 0, "challenge2": 0, "challenge3": 0 },
-    { "team": "B-groupB",            "challenge1": 0, "challenge2": 0, "challenge3": 0 },
+    { "team": "B-groupB",            "challenge1": 1742, "challenge2": 0, "challenge3": 0 },
     { "team": "C-The Comeback Team", "challenge1": 260, "challenge2": 0, "challenge3": 0 },
     { "team": "D-SPIDERMAN",         "challenge1": 0, "challenge2": 0, "challenge3": 0 },
     { "team": "E-Gp-E",              "challenge1": 3517, "challenge2": 0, "challenge3": 0 },
