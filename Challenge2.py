@@ -607,6 +607,13 @@ def run_evolution_nsga(
     ckpt_dir = Path(checkpoint_path)
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
+    if n_parents != population_size:
+        print(
+            "Warning: canonical NSGA-II uses n_parents == population_size; "
+            f"overriding n_parents from {n_parents} to {population_size}."
+        )
+    n_parents = population_size
+
     # NSGA-II hyperparameters
     nsga_kwargs = dict(
         population_size=population_size,
@@ -673,7 +680,7 @@ def run_evolution_nsga(
         progress = (generation + 1) / num_generations
         bar_length = 50
         filled = int(bar_length * progress)
-        bar = "█" * filled + "░" * (bar_length - filled)
+        bar = "#" * filled + "-" * (bar_length - filled)
 
         print(
             f"Gen {generation + 1:4d}/{num_generations} [{bar}] {progress * 100:5.1f}%"
@@ -810,16 +817,16 @@ if __name__ == "__main__":
 
     # Uncomment to run full NSGA-II evolution:
     run_evolution_nsga(
-        num_generations=100,
-        population_size=10,
+        num_generations=1000,
+        population_size=100,
         run_evaluation=False,
         compute_score=True,
         random_seed=42,
         n_repeats=2,
-        mutation_prob=0.3,
-        crossover_prob=0.5,
-        bounds=(-1, 1),
-        n_parents=10,
+        mutation_prob=0.10,
+        crossover_prob=0.2,
+        bounds=(-2, 2),
+        n_parents=100,
         ckpt_interval=5,
         checkpoint_path=None,
     )

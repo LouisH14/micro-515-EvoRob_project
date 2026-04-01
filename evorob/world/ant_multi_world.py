@@ -11,13 +11,19 @@ from evorob.world.robot.controllers.mlp import NeuralNetworkController
 class AntMultiWorld(World):
     """Wrapper for the Ant environment for evolutionary optimization."""
 
-    def __init__(self, controller_cls: type[Controller] = NeuralNetworkController, **kwargs):
+    def __init__(
+        self,
+        controller_cls: type[Controller] = NeuralNetworkController,
+        eval_episodes_per_env: int = 2,
+        **kwargs,
+    ):
         self.env = self.create_env(**kwargs)
         self.dt = self.env.envs[0].unwrapped.dt
         self.action_size = self.env.action_space.shape[1]
         self.obs_size = self.env.observation_space.shape[1]
         self.controller = controller_cls(self.obs_size, self.action_size)
         self.n_params = self.controller.n_params
+        self.eval_episodes_per_env = eval_episodes_per_env
         self._eval_counter = 0  # Counter for seed generation
 
     def create_env(
@@ -62,28 +68,31 @@ class AntMultiWorld(World):
 
     def evaluate_individual(self, genotype, trial_time: int = 20):
         """Evaluate a single individual (genotype) in the environment."""
-        n_sim_steps = int(trial_time / self.dt)
+        n_sim_steps = min(int(trial_time / self.dt), self.max_episode_steps)
 
         self.geno2pheno(genotype)
 
-        # Generate unique seeds for each environment in this evaluation
-        seeds = [self._eval_counter * self.n_repeats + i for i in range(self.n_repeats)]
-        self._eval_counter += 1
-        
-        observations, _ = self.env.reset(seed=seeds)
-        done_mask = np.zeros(self.n_repeats, dtype=bool)
-        rewards_full = np.zeros((n_sim_steps, self.n_repeats))
-        for step in range(n_sim_steps):
-            action = self.controller.get_action(observations)
-            observations, rewards, terminated, truncated, _ = self.env.step(action)
-            rewards_full[step, ~done_mask] = rewards[~done_mask]
+        # Average across multiple episodes to reduce noise and improve robustness.
+        rewards_accumulator = np.zeros(self.n_repeats)
+        for _ in range(self.eval_episodes_per_env):
+            seeds = np.random.randint(0, 2**31 - 1, size=self.n_repeats).tolist()
+            self._eval_counter += 1
 
-            done_mask = done_mask | terminated | truncated
+            observations, _ = self.env.reset(seed=seeds)
+            done_mask = np.zeros(self.n_repeats, dtype=bool)
+            rewards_full = np.zeros((n_sim_steps, self.n_repeats))
+            for step in range(n_sim_steps):
+                action = self.controller.get_action(observations)
+                observations, rewards, terminated, truncated, _ = self.env.step(action)
+                rewards_full[step, ~done_mask] = rewards[~done_mask]
 
-            if np.all(done_mask):
-                break
+                done_mask = done_mask | terminated | truncated
+                if np.all(done_mask):
+                    break
 
-        final_rewards = np.sum(rewards_full, axis=0)
+            rewards_accumulator += np.sum(rewards_full, axis=0)
+
+        final_rewards = rewards_accumulator / float(self.eval_episodes_per_env)
 
         half_idx = self.n_repeats // 2
         reward_env1 = np.mean(final_rewards[:half_idx])

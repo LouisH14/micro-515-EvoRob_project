@@ -86,6 +86,7 @@ class NSGAII(EA):
         # Initialize current_population for first generation
         self.current_population = None
         self.fitness = None
+        self.best_score_so_far = -np.inf
 
     def ask(self) -> np.ndarray:
         """Generates a new population of candidate solutions.
@@ -128,6 +129,7 @@ class NSGAII(EA):
             combined_fitness = np.vstack([self.fitness, fitness])
 
         # Select best n_pop individuals from combined population
+        # Canonical NSGA-II (mu+lambda): keep a full parent population of size n_pop.
         parents_population, parents_fitness = self.sort_and_select_parents(
             combined_population, combined_fitness, self.n_pop
         )
@@ -141,8 +143,7 @@ class NSGAII(EA):
         self.f = fitness
         self.x = population
 
-        fitness_sums = fitness.sum(axis=1)
-        best_in_current_gen_idx = np.argmax(fitness_sums)
+        best_in_current_gen_idx, current_best_score = self.select_best_index(fitness)
 
         current_best_fitness = fitness[best_in_current_gen_idx]
         current_best_x = population[best_in_current_gen_idx]
@@ -150,11 +151,12 @@ class NSGAII(EA):
         if self.current_gen == 0:
             self.f_best_so_far = current_best_fitness
             self.x_best_so_far = current_best_x
+            self.best_score_so_far = current_best_score
         else:
-            if np.all(current_best_fitness >= self.f_best_so_far):
-                if np.any(current_best_fitness > self.f_best_so_far):
-                    self.f_best_so_far = current_best_fitness
-                    self.x_best_so_far = current_best_x
+            if current_best_score > self.best_score_so_far:
+                self.f_best_so_far = current_best_fitness
+                self.x_best_so_far = current_best_x
+                self.best_score_so_far = current_best_score
 
         if self.current_gen % 5 == 0:
             print(f"Generation {self.current_gen}:\t{self.f_best_so_far}")
@@ -167,6 +169,20 @@ class NSGAII(EA):
             self.save_checkpoint()
 
         self.current_gen += 1
+
+    def select_best_index(self, fitness: np.ndarray) -> Tuple[int, float]:
+        """Select a representative best individual using normalized objective sum.
+
+        Normalization is done per objective with min-max scaling to avoid one
+        objective dominating the score due to scale alone.
+        """
+        obj_min = np.min(fitness, axis=0)
+        obj_max = np.max(fitness, axis=0)
+        denom = np.maximum(obj_max - obj_min, 1e-12)
+        normalized = (fitness - obj_min) / denom
+        scores = np.sum(normalized, axis=1)
+        best_idx = int(np.argmax(scores))
+        return best_idx, float(scores[best_idx])
 
     def initialise_x0(self) -> np.ndarray:
         """Initializes the population with random uniform samples.
@@ -321,16 +337,12 @@ class NSGAII(EA):
         pareto_fronts: List[List[int]] = [[]]
 
         for individual_a in range(len(fitness)):
-            for individual_b in range(len(fitness)):
-                # does individual_a dominate individual_b?
+            for individual_b in range(individual_a + 1, len(fitness)):
+                # Compare each pair exactly once to avoid double-counting.
                 if self.dominates(fitness[individual_a], fitness[individual_b]):
-                    # TODO: Track that individual_a dominates individual_b
                     domination_lists[individual_a].append(individual_b)
                     domination_counts[individual_b] += 1
-
-                # does individual_b dominate individual_a?
                 elif self.dominates(fitness[individual_b], fitness[individual_a]):
-                    # TODO: Track that individual_a is dominated by individual_b
                     domination_lists[individual_b].append(individual_a)
                     domination_counts[individual_a] += 1
 
@@ -374,84 +386,60 @@ class NSGAII(EA):
         return pareto_fronts, population_rank
 
     def compute_crowding_distance(self, fitness: np.ndarray, front: List[int]) -> np.ndarray:
-        """Computes crowding distance for solutions in a given front.
-        
-        Crowding distance estimates the density of solutions surrounding a particular
-        solution. Boundary solutions (extremes in any objective) receive infinite
-        distance to preserve diversity. Interior solutions receive distance based on
-        the average side length of the cuboid formed by their nearest neighbors.
-        
-        Args:
-            fitness (np.ndarray): Objective values for all solutions.
-                                  Shape: (population_size, n_objectives)
-            front (List[int]): Indices of solutions in the current front.
-            
-        Returns:
-            np.ndarray: Crowding distance for each solution in the front.
-                       Shape: (len(front),)
-        """
         n_solutions = len(front)
-        n_objectives = fitness.shape[1]
+        if n_solutions == 0:
+            return np.array([])
+        if n_solutions <= 2:
+            return np.full(n_solutions, np.inf)
 
-        # Initialize distances to zero
+        n_objectives = fitness.shape[1]
         distance = np.zeros(n_solutions)
 
-        # TODO: For each objective:
-        # 1. Sort the front by that objective
-        # 2. Assign infinite distance to boundary solutions
-        # 3. Compute normalized distance for interior solutions
+        # Local copy for quicker indexing
+        front_fitness = fitness[front]
+
         for obj in range(n_objectives):
-            # Sort the front by the current objective
-            sorted_indices = np.argsort(fitness[front, obj])
-            # Assign infinite distance to boundary solutions
+            sorted_indices = np.argsort(front_fitness[:, obj])
+
+            # Boundary points always get infinite crowding distance
             distance[sorted_indices[0]] = np.inf
             distance[sorted_indices[-1]] = np.inf
-            # Compute normalized distance for interior solutions
+
+            obj_min = front_fitness[sorted_indices[0], obj]
+            obj_max = front_fitness[sorted_indices[-1], obj]
+            denom = obj_max - obj_min
+
+            if denom <= 1e-12:
+                # All values identical on this objective -> no contribution
+                continue
+
             for i in range(1, n_solutions - 1):
-                distance[sorted_indices[i]] = (fitness[front[sorted_indices[i + 1]], obj] - fitness[front[sorted_indices[i - 1]], obj]) / (np.max(fitness[:, obj]) - np.min(fitness[:, obj]) + 1e-8)
-       
+                if np.isinf(distance[sorted_indices[i]]):
+                    continue
+                prev_val = front_fitness[sorted_indices[i - 1], obj]
+                next_val = front_fitness[sorted_indices[i + 1], obj]
+                distance[sorted_indices[i]] += (next_val - prev_val) / denom
+
         return distance
-    
-        raise NotImplementedError(
-            "TODO: Implement crowding distance calculation.\n"
-            "See Exercise 2c in challenge2.md for guidance."
-        )
 
-    def crowding_operator(self, individual_idx: int, other_individual_idx: int,
-                          population_rank: List[int], crowding_distances: np.ndarray) -> int:
-        """Compares two individuals based on rank and crowding distance.
-        
-        The crowding operator defines a partial order on solutions:
-        1. If ranks differ, prefer solution with better (lower) rank
-        2. If ranks are equal, prefer solution with larger crowding distance
-           (to maintain diversity)
-        
-        Args:
-            individual_idx (int): Index of first individual.
-            other_individual_idx (int): Index of second individual.
-            population_rank (List[int]): Front rank for each solution.
-            crowding_distances (np.ndarray): Crowding distance for each solution.
-            
-        Returns:
-            int: Index of the preferred individual.
-        """
-        # TODO: Compare two individuals
-        # 1. Prefer lower rank (better Pareto front)
-        # 2. If same rank, prefer larger crowding distance
 
-        if population_rank[individual_idx] < population_rank[other_individual_idx]:
-            return individual_idx
-        elif population_rank[individual_idx] > population_rank[other_individual_idx]:
-            return other_individual_idx
-        else:
-            if crowding_distances[individual_idx] > crowding_distances[other_individual_idx]:
-                return individual_idx
-            else:
-                return other_individual_idx
-        
-        raise NotImplementedError(
-            "TODO: Implement crowding operator.\n"
-            "See Exercise 2d in challenge2.md for guidance."
+    def crowding_operator(
+        self,
+        individual_idx: int,
+        other_individual_idx: int,
+        population_rank: List[int],
+        crowding_distances: np.ndarray,
+    ) -> int:
+        rank_a = population_rank[individual_idx]
+        rank_b = population_rank[other_individual_idx]
+
+        if rank_a != rank_b:
+            return individual_idx if rank_a < rank_b else other_individual_idx
+
+        return (
+            individual_idx
+            if crowding_distances[individual_idx] > crowding_distances[other_individual_idx]
+            else other_individual_idx
         )
 
     def tournament_selection(self, population_rank: List[int],
