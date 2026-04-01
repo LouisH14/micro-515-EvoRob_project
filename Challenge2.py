@@ -1,6 +1,7 @@
 import os
-os.environ["MUJOCO_GL"] = "wgl" # windows replacement
-# os.environ.setdefault("MUJOCO_GL", "egl") 
+
+os.environ["MUJOCO_GL"] = "wgl"  # windows replacement
+# os.environ.setdefault("MUJOCO_GL", "egl")
 
 
 from datetime import datetime
@@ -35,24 +36,24 @@ def test_exercise_implementation():
         nsga = NSGAII(population_size=10, n_opt_params=5)
 
         # Test case 1: Clear dominance
-        assert nsga.dominates([5, 3], [4, 2]) == True, (
-            "[5,3] should dominate [4,2] (better in both)"
-        )
+        assert (
+            nsga.dominates([5, 3], [4, 2]) == True
+        ), "[5,3] should dominate [4,2] (better in both)"
 
         # Test case 2: No dominance (trade-off)
-        assert nsga.dominates([5, 2], [4, 3]) == False, (
-            "[5,2] should NOT dominate [4,3] (trade-off)"
-        )
+        assert (
+            nsga.dominates([5, 2], [4, 3]) == False
+        ), "[5,2] should NOT dominate [4,3] (trade-off)"
 
         # Test case 3: Equal in one, better in other
-        assert nsga.dominates([5, 3], [5, 2]) == True, (
-            "[5,3] should dominate [5,2] (equal in first, better in second)"
-        )
+        assert (
+            nsga.dominates([5, 3], [5, 2]) == True
+        ), "[5,3] should dominate [5,2] (equal in first, better in second)"
 
         # Test case 4: Identical solutions
-        assert nsga.dominates([4, 3], [4, 3]) == False, (
-            "[4,3] should NOT dominate [4,3] (identical)"
-        )
+        assert (
+            nsga.dominates([4, 3], [4, 3]) == False
+        ), "[4,3] should NOT dominate [4,3] (identical)"
 
         print("✅ Dominance function works correctly!")
     except NotImplementedError as e:
@@ -91,25 +92,25 @@ def test_exercise_implementation():
         fronts, ranks = nsga.fast_nondominated_sort(test_fitness)
 
         # Verify Front 0 contains non-dominated solutions
-        assert len(fronts[0]) == 3, (
-            f"Front 0 should have 3 solutions, got {len(fronts[0])}"
-        )
-        assert all(ranks[i] == 0 for i in fronts[0]), (
-            "Front 0 solutions should have rank 0"
-        )
+        assert (
+            len(fronts[0]) == 3
+        ), f"Front 0 should have 3 solutions, got {len(fronts[0])}"
+        assert all(
+            ranks[i] == 0 for i in fronts[0]
+        ), "Front 0 solutions should have rank 0"
 
         # Verify Front 1
-        assert len(fronts[1]) == 2, (
-            f"Front 1 should have 2 solutions, got {len(fronts[1])}"
-        )
-        assert all(ranks[i] == 1 for i in fronts[1]), (
-            "Front 1 solutions should have rank 1"
-        )
+        assert (
+            len(fronts[1]) == 2
+        ), f"Front 1 should have 2 solutions, got {len(fronts[1])}"
+        assert all(
+            ranks[i] == 1 for i in fronts[1]
+        ), "Front 1 solutions should have rank 1"
 
         # Verify Front 2
-        assert len(fronts[2]) == 1, (
-            f"Front 2 should have 1 solution, got {len(fronts[2])}"
-        )
+        assert (
+            len(fronts[2]) == 1
+        ), f"Front 2 should have 1 solution, got {len(fronts[2])}"
         assert ranks[5] == 2, "Last solution should be in Front 2"
 
         print(f"✅ Sorting correctly identified {len(fronts)} fronts!")
@@ -160,15 +161,15 @@ def test_exercise_implementation():
         assert distances[4] == np.inf, "Last solution should have infinite distance"
 
         # Interior solutions should have finite positive distance
-        assert distances[1] > 0 and np.isfinite(distances[1]), (
-            "Interior solution should have finite positive distance"
-        )
-        assert distances[2] > 0 and np.isfinite(distances[2]), (
-            "Interior solution should have finite positive distance"
-        )
-        assert distances[3] > 0 and np.isfinite(distances[3]), (
-            "Interior solution should have finite positive distance"
-        )
+        assert distances[1] > 0 and np.isfinite(
+            distances[1]
+        ), "Interior solution should have finite positive distance"
+        assert distances[2] > 0 and np.isfinite(
+            distances[2]
+        ), "Interior solution should have finite positive distance"
+        assert distances[3] > 0 and np.isfinite(
+            distances[3]
+        ), "Interior solution should have finite positive distance"
 
         print("✅ Crowding distance works correctly!")
         print(f"   Boundary distances: {distances[0]}, {distances[4]} (should be ∞)")
@@ -227,12 +228,14 @@ def test_exercise_implementation():
             test_population, test_fitness, n_parents=5
         )
 
-        assert parents.shape == (5, 5), (
-            f"Should select 5 parents with 5 params, got shape {parents.shape}"
-        )
-        assert parent_fitness.shape == (5, 2), (
-            f"Parent fitness should be (5, 2), got {parent_fitness.shape}"
-        )
+        assert parents.shape == (
+            5,
+            5,
+        ), f"Should select 5 parents with 5 params, got shape {parents.shape}"
+        assert parent_fitness.shape == (
+            5,
+            2,
+        ), f"Parent fitness should be (5, 2), got {parent_fitness.shape}"
 
         print("✅ Parent selection works!")
         print(
@@ -269,6 +272,7 @@ def inspect_ant_multi_world():
 # Plotting helpers
 # ---------------------------------------------------------------------------
 
+
 def plot_fitness(full_f, output_dir):
     """Save a fitness-over-generations plot for both objectives."""
     fitness_array = np.array(full_f)  # (n_generations, n_pop, 2)
@@ -284,18 +288,27 @@ def plot_fitness(full_f, output_dir):
         std_per_gen = np.std(obj_fitness, axis=1)
 
         ax.plot(
-            generations, best_per_gen,
-            label="Best", color="#B51F1F", linewidth=2, linestyle="--",
+            generations,
+            best_per_gen,
+            label="Best",
+            color="#B51F1F",
+            linewidth=2,
+            linestyle="--",
         )
         ax.plot(
-            generations, mean_per_gen,
-            label="Mean", color="#007480", linewidth=2,
+            generations,
+            mean_per_gen,
+            label="Mean",
+            color="#007480",
+            linewidth=2,
         )
         ax.fill_between(
             generations,
             mean_per_gen - std_per_gen,
             mean_per_gen + std_per_gen,
-            alpha=0.2, color="#007480", label="Mean +/- 1 std",
+            alpha=0.2,
+            color="#007480",
+            label="Mean +/- 1 std",
         )
         ax.set_xlabel("Generation")
         ax.set_ylabel("Fitness")
@@ -335,11 +348,16 @@ def plot_pareto_fronts(fitness, output_dir, num_generations=None, population_siz
         si = np.argsort(fi[:, 0])
         fi_sorted = fi[si]
         ax.plot(
-            fi_sorted[:, 0], fi_sorted[:, 1],
-            color=top_colors[i], alpha=0.5, linewidth=1.2, zorder=3,
+            fi_sorted[:, 0],
+            fi_sorted[:, 1],
+            color=top_colors[i],
+            alpha=0.5,
+            linewidth=1.2,
+            zorder=3,
         )
         ax.scatter(
-            fi[:, 0], fi[:, 1],
+            fi[:, 0],
+            fi[:, 1],
             label=f"Front {i}",
             color=top_colors[i],
             s=50,
@@ -355,7 +373,8 @@ def plot_pareto_fronts(fitness, output_dir, num_generations=None, population_siz
             fi = fitness[fronts[i]]
             t = (i - 3) / max(n_fronts - 4, 1)
             ax.scatter(
-                fi[:, 0], fi[:, 1],
+                fi[:, 0],
+                fi[:, 1],
                 label=f"Front {i}" if i <= 6 else None,
                 color=remaining_cmap(t),
                 s=25,
@@ -399,6 +418,7 @@ def plot_pareto_fronts_from_checkpoint(checkpoint_dir: str):
 # ---------------------------------------------------------------------------
 # Evaluation helpers
 # ---------------------------------------------------------------------------
+
 
 def _run_episodes(env, controller, genotype, n_episodes, max_episode_steps, seed):
     """Run n_episodes on a single environment, return list of episode rewards."""
@@ -488,7 +508,9 @@ def evaluate_checkpoint(
     print(f"Loaded genotype from: {x_best_path}  (shape: {genotype.shape})")
 
     controller = NeuralNetworkController(input_size=27, output_size=8, hidden_size=16)
-    print(f"Controller: NeuralNetworkController  |  Parameters: {controller.n_params}\n")
+    print(
+        f"Controller: NeuralNetworkController  |  Parameters: {controller.n_params}\n"
+    )
 
     # --- Evaluate on both environments ---
     terrains = {
@@ -524,8 +546,13 @@ def evaluate_checkpoint(
     for terrain_name, robot_path in terrains.items():
         video_path = os.path.join(output_dir, f"evaluation_{terrain_name}.mp4")
         _record_video(
-            AntFlatEnvironment, robot_path, controller, genotype,
-            max_episode_steps, seed, video_path,
+            AntFlatEnvironment,
+            robot_path,
+            controller,
+            genotype,
+            max_episode_steps,
+            seed,
+            video_path,
         )
 
     # --- Save score file with summary ---
@@ -542,7 +569,9 @@ def evaluate_checkpoint(
         f.write("=" * 60 + "\n")
         f.write("SUMMARY\n")
         f.write("=" * 60 + "\n")
-        f.write(f"{'Terrain':<8s} {'Mean':>8s} {'Std':>8s} {'Best':>8s} {'Worst':>8s} {'Median':>8s}\n")
+        f.write(
+            f"{'Terrain':<8s} {'Mean':>8s} {'Std':>8s} {'Best':>8s} {'Worst':>8s} {'Median':>8s}\n"
+        )
         f.write("-" * 60 + "\n")
         for terrain_name in terrains:
             r = results[terrain_name]
@@ -564,8 +593,12 @@ def evaluate_checkpoint(
 
     print(f"\nScore saved to: {score_path}")
     print(f"\n{'=' * 50}")
-    print(f"  FLAT : {results['flat']['mean']:.2f} +/- {results['flat']['std']:.2f}  (best: {results['flat']['best']:.2f})")
-    print(f"  ICE  : {results['ice']['mean']:.2f} +/- {results['ice']['std']:.2f}  (best: {results['ice']['best']:.2f})")
+    print(
+        f"  FLAT : {results['flat']['mean']:.2f} +/- {results['flat']['std']:.2f}  (best: {results['flat']['best']:.2f})"
+    )
+    print(
+        f"  ICE  : {results['ice']['mean']:.2f} +/- {results['ice']['std']:.2f}  (best: {results['ice']['best']:.2f})"
+    )
     print(f"{'=' * 50}")
 
     return results
@@ -574,6 +607,7 @@ def evaluate_checkpoint(
 # ---------------------------------------------------------------------------
 # Main training loop
 # ---------------------------------------------------------------------------
+
 
 def run_evolution_nsga(
     num_generations: int,
@@ -666,8 +700,8 @@ def run_evolution_nsga(
         for i, individual in enumerate(population):
             multi_fitness[i] = world.evaluate_individual(individual)
 
-        save_checkpoint = (
-            (generation % ckpt_interval == 0) or (generation == num_generations - 1)
+        save_checkpoint = (generation % ckpt_interval == 0) or (
+            generation == num_generations - 1
         )
         nsga.tell(population, multi_fitness, save_checkpoint=save_checkpoint)
 
@@ -701,7 +735,8 @@ def run_evolution_nsga(
     # Pareto front plot
     final_fitness = np.array(nsga.full_f)[-1]
     plot_pareto_fronts(
-        final_fitness, ckpt_dir,
+        final_fitness,
+        ckpt_dir,
         num_generations=num_generations,
         population_size=population_size,
     )
@@ -738,12 +773,16 @@ def run_evolution_nsga(
                 try:
                     while True:
                         action = evaluation_controller.get_action(obs)
-                        obs, reward, terminated, truncated, _ = evaluation_env.step(action)
+                        obs, reward, terminated, truncated, _ = evaluation_env.step(
+                            action
+                        )
                         trial_reward += reward
 
                         if np.logical_or(terminated, truncated):
                             trial_count += 1
-                            print(f"Trial {trial_count} reward: {float(trial_reward):.2f}")
+                            print(
+                                f"Trial {trial_count} reward: {float(trial_reward):.2f}"
+                            )
                             trial_reward = 0.0
                             obs, _ = evaluation_env.reset()
                 except KeyboardInterrupt:
@@ -751,7 +790,9 @@ def run_evolution_nsga(
                 finally:
                     evaluation_env.close()
             except Exception as e:
-                print(f"Warning: Interactive evaluation skipped (rendering unavailable): {e}")
+                print(
+                    f"Warning: Interactive evaluation skipped (rendering unavailable): {e}"
+                )
         else:
             print("Skipping interactive evaluation (no display available).")
 
@@ -759,6 +800,7 @@ def run_evolution_nsga(
 # ---------------------------------------------------------------------------
 # Standalone checkpoint utilities
 # ---------------------------------------------------------------------------
+
 
 def replay_checkpoint(checkpoint_path: str):
     """Re-evaluate a checkpoint and generate videos."""
