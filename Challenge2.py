@@ -810,16 +810,16 @@ if __name__ == "__main__":
 
     # Uncomment to run full NSGA-II evolution:
     run_evolution_nsga(
-        num_generations=1000,
-        population_size=100,
+        num_generations=200,
+        population_size=250,
         run_evaluation=False,
         compute_score=True,
         random_seed=42,
-        n_repeats=2,
-        mutation_prob=0.1,
-        crossover_prob=0.2,
+        n_repeats=4,
+        mutation_prob=0.3,
+        crossover_prob=0.8,
         bounds=(-1, 1),
-        n_parents=50,
+        n_parents=150,
         ckpt_interval=5,
         checkpoint_path=None,
     )
