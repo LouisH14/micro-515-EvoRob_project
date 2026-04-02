@@ -1,6 +1,7 @@
 import os
+os.environ["MUJOCO_GL"] = "glfw" # windows replacement
+# os.environ.setdefault("MUJOCO_GL", "egl") 
 
-os.environ.setdefault("MUJOCO_GL", "egl")
 
 from datetime import datetime
 from pathlib import Path
@@ -809,23 +810,23 @@ if __name__ == "__main__":
 
     # Uncomment to run full NSGA-II evolution:
     run_evolution_nsga(
-        num_generations=100,
-        population_size=10,
+        num_generations=1000,
+        population_size=100,
         run_evaluation=False,
         compute_score=True,
         random_seed=42,
         n_repeats=2,
-        mutation_prob=0.3,
-        crossover_prob=0.5,
+        mutation_prob=0.1,
+        crossover_prob=0.2,
         bounds=(-1, 1),
-        n_parents=10,
+        n_parents=50,
         ckpt_interval=5,
         checkpoint_path=None,
     )
 
     # Uncomment to replay your checkpoint
     # replay_checkpoint(
-    #     checkpoint_path="./results/nsga_multi_terrain_ckpt/99"
+    #     checkpoint_path="./results/20260326_121700_nsga_ckpts/99"
     # )
 
     # Uncomment to plot Pareto fronts from checkpoint
