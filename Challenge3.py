@@ -18,7 +18,7 @@ from evorob.utils.filesys import (
     get_distinct_filename,
     get_last_checkpoint_dir,
     get_project_root,
-)
+) 
 from evorob.world.base import World
 from evorob.world.robot.controllers.mlp_sol import NeuralNetworkController
 from evorob.world.robot.controllers.so2 import SO2Controller
