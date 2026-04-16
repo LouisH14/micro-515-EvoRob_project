@@ -43,8 +43,8 @@ class AntWorld(World):
                                         output_size=action_space,
                                         hidden_size=action_space)
 
-        self.n_weights = self.controller.n_params
-        self.n_body_params = 8
+        self.n_weights = self.controller.n_params # Number of controller parameters - no. of genotype parameters that affect the controller
+        self.n_body_params = 1
 
         self.n_params = self.n_weights + self.n_body_params
         self.temp_dir = TemporaryDirectory()
@@ -94,7 +94,7 @@ class AntWorld(World):
 
     def geno2pheno(self, genotype):
         control_weights = genotype[:self.n_weights]*0.1
-        body_params = (genotype[self.n_weights:]+1)/4+0.1
+        body_params = (genotype[self.n_weights:]+1)/4+0.1 # 0.1 to 0.6 since search space is -1 to 1, and we want to avoid zero or negative lengths
         assert len(body_params) == self.n_body_params
         assert len(control_weights) == self.n_weights
         assert not np.any(body_params <= 0)
@@ -102,6 +102,16 @@ class AntWorld(World):
         self.controller.geno2pheno(control_weights)
 
         front_left_leg, front_left_ankle, front_right_leg, front_right_ankle, back_left_leg, back_left_ankle, back_right_leg, back_right_ankle, = body_params
+
+        # Add constraints to reduce search space - since we changed n_body_params to 1, we need to derive all leg lengths from a single parameter
+        front_left_leg = front_left_ankle
+        front_right_leg = front_right_ankle
+        back_left_leg = back_left_ankle
+        back_right_leg = back_right_ankle
+
+        front_left_leg = front_right_leg
+        back_left_leg = back_right_leg
+        front_left_leg = back_left_leg
 
         # Define the 3D coordinates of the relative tree structure
         front_left_hip_xyz = np.array([0.2, 0.2, 0])
@@ -507,7 +517,7 @@ def main():
     world.n_params = world.n_weights + world.n_body_params
     n_parameters = world.n_params
     population_size = 150
-    opts = CMAES_opts.copy()
+    opts = {}
     opts["min"] = -1
     opts["max"] = 1
     opts["mutation_sigma"] = 0.3
