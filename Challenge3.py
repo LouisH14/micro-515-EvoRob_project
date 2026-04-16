@@ -101,17 +101,18 @@ class AntWorld(World):
 
         self.controller.geno2pheno(control_weights)
 
-        front_left_leg, front_left_ankle, front_right_leg, front_right_ankle, back_left_leg, back_left_ankle, back_right_leg, back_right_ankle, = body_params
+        leg = body_params[0]
 
         # Add constraints to reduce search space - since we changed n_body_params to 1, we need to derive all leg lengths from a single parameter
-        front_left_leg = front_left_ankle
-        front_right_leg = front_right_ankle
-        back_left_leg = back_left_ankle
-        back_right_leg = back_right_ankle
+        front_left_leg = leg
+        front_right_leg = leg
+        back_left_leg = leg
+        back_right_leg = leg
 
-        front_left_leg = front_right_leg
-        back_left_leg = back_right_leg
-        front_left_leg = back_left_leg
+        front_left_ankle = leg
+        front_right_ankle = leg
+        back_left_ankle = leg
+        back_right_ankle = leg
 
         # Define the 3D coordinates of the relative tree structure
         front_left_hip_xyz = np.array([0.2, 0.2, 0])
