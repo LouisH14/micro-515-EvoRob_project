@@ -168,7 +168,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     checkpoint_dir = Path(args.checkpoint_dir)
-    output_dir = Path(args.output_dir) if args.output_dir else checkpoint_dir / "submission_export"
+    output_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else checkpoint_dir / "submission_export"
+    )
     export_submission(checkpoint_dir, output_dir)
 
 
