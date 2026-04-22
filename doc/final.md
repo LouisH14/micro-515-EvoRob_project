@@ -34,9 +34,6 @@ To complete the final project, submit the following materials:
 
 - **Code**: Your `final_project.py`, `<your_controller>.py` with all experimental modifications
 - **Data**: Your best evolved genotype as `x_best.npy`
-- **Analysis Report**: A `README.md` (max. 400 words) containing:
-  - A description of the chosen research question and hypothesis
-  - A summary of the evolutionary setup (controller type, genotype encoding, EA configuration)
 
 Provide all documents in a zipped folder using the following naming convention:  
 `2026_micro_515_SCIPER_TEAMNAME_LASTNAME1_LASTNAME2_final.zip`
