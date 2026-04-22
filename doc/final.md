@@ -1,7 +1,7 @@
 
 # Final Report: Full Robot Evolution
 
-**Goal:** Evolve a complete robot — body morphology and neural controller — capable of locomotion across four increasingly challenging environments.  
+**Goal:** Evolve a complete robot — body morphology and neural controller — capable of locomotion across four environments.  
 **How:** Integrate the body–brain co-evolution pipeline from the previous challenges and extend it to a multi-task setting.
 
 ---
