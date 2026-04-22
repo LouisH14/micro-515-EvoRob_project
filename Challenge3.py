@@ -12,7 +12,7 @@ from gymnasium.vector import AsyncVectorEnv
 from tqdm import trange
 
 #TODO: set for cmaes
-from evorob.algorithms.ea_api_sol import EvoAlgAPI
+from evorob.algorithms.ea_api import EvoAlgAPI
 from evorob.algorithms.nsga import NSGAII
 from evorob.utils.filesys import (
     get_distinct_filename,
@@ -257,7 +257,13 @@ def _run_episodes_hill(world, genotype, n_episodes, max_episode_steps, seed):
             if action.ndim > 1:
                 action = action.squeeze(0)
             obs, reward, terminated, truncated, info = env.step(action)
-            total_reward += reward
+            # Neutral reward computed from info so students' custom reward strategies
+            # do not affect leaderboard comparisons.
+            neutral_reward = (float(info.get("healthy_reward", 1.0))
+                              + float(info.get("x_position", 0.0))
+                              - float(info.get("ctrl_cost", 0.0))
+                              - float(info.get("cfrc_cost", 0.0)))
+            total_reward += neutral_reward
             total_obj1 += float(info.get("reward_forward", 0.0)) + float(info.get("healthy_reward", 0.0))
             total_obj2 += -float(info.get("ctrl_cost", 0.0))
             if terminated or truncated:
@@ -420,6 +426,7 @@ def evaluate_checkpoint(
         f.write(f"Genotype size   : {world.n_params}  (weights={world.controller.n_params}, body={world.n_body_params})\n")
         f.write(f"Checkpoint      : {checkpoint_dir}\n")
         f.write(f"Episodes/indiv. : {n_episodes}\n")
+        f.write(f"Neutral reward  : healthy_reward + x_position - ctrl_cost - cfrc_cost (from info)\n")
         f.write(f"Objectives      : [reward_forward+healthy_reward, -ctrl_cost]\n\n")
 
         f.write("=" * 72 + "\n")
