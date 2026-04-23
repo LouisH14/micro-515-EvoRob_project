@@ -12,7 +12,7 @@ from gymnasium.vector import AsyncVectorEnv
 from tqdm import trange
 
 #TODO: set for cmaes
-from evorob.algorithms.ea_api import EvoAlgAPI
+from evorob.algorithms.ea_api import EvoAlgAPI as CMAES
 from evorob.algorithms.nsga import NSGAII
 from evorob.utils.filesys import (
     get_distinct_filename,
@@ -39,10 +39,16 @@ class AntWorld(World):
         action_space = 8  # https://gymnasium.farama.org/environments/mujoco/ant/#action-space
         state_space = 27  # https://gymnasium.farama.org/environments/mujoco/ant/#observation-space
 
-        self.controller = SO2Controller(input_size=state_space,
-                                        output_size=action_space,
-                                        hidden_size=action_space)
 
+        # self.controller = SO2Controller(input_size=state_space,
+        #                                 output_size=action_space,
+        #                                 hidden_size=action_space)
+        self.controller = NeuralNetworkController(input_size=state_space,
+                                            output_size=action_space,
+                                            hidden_size=action_space)
+        # self.controller = HebbianController(input_size=state_space,
+        #                                     output_size=action_space,
+        #                                     hidden_size=action_space,)
         self.n_weights = self.controller.n_params
         self.n_body_params = 8
 
@@ -68,7 +74,7 @@ class AntWorld(World):
         robot.xml = robot.define_robot()
         robot.write_xml(self.temp_dir.name)
 
-        #% Defining the Robot environment in MuJoCo
+        # % Defining the Robot environment in MuJoCo #TODO
         world = xml.parse(self.base_xml_path)
         robot_env = world.getroot()
 
@@ -156,9 +162,9 @@ class AntWorld(World):
         # 1. Create the Slope (Gradient along X)
         # 0.0 at the back, 1.0 at the front
         # TODO: Change the terrain parameters
-        slope_deg = 0.0
-        bump_scale = 0.0
-        sigma = 1.0
+        slope_deg = 5.0  # Angle in degrees (set to 0.0 for flat)
+        bump_scale = 0.1  # Magnitude of bumps (0.0 to 1.0 relative to max height)
+        sigma = 3.0  # Smoothness of bumps
 
         # 1. Create Linear Slope (Gradient along X)
         rise = np.tan(np.deg2rad(slope_deg))
@@ -209,7 +215,7 @@ class AntWorld(World):
             rewards_full[step, ~done_mask] = rewards[~done_mask]
 
             # TODO: design appropriate moo-rewards
-            multi_obj_reward = np.array([infos["z_velocity"], -infos["ctrl_cost"]]).T # TODO
+            multi_obj_reward = np.array([infos["reward_forward"]+infos["healthy_reward"], -infos["ctrl_cost"]]).T # TODO
             multi_obj_rewards_full[step, ~done_mask] = multi_obj_reward[~done_mask]
 
             # Update the done mask based on the "done" and "truncated" flags
@@ -491,20 +497,21 @@ def main():
     world.visualise_individual(genotype)
 
     # TODO Overwrite controller and load best run exercise 1
-    state_space = ...
-    action_space = ... # Change controller
-    world.controller = NeuralNetworkController(...,
-                                               ...,
-                                               ...)
+    state_space = 27
+    action_space = 8  # Change controller
+    world.controller = NeuralNetworkController(input_size=state_space,
+                                               output_size=action_space,
+                                               hidden_size=16)
     world.n_weights = world.controller.n_params
     world.n_params = world.n_weights + world.n_body_params
 
-    result_dir = ...
-    prev_best = ... # load previous run
+    results_dir = join(ROOT_DIR, "results", ENV_NAME, "ES")
+    checkpoint = get_last_checkpoint_dir(results_dir)
+    prev_best = np.load(join(results_dir, checkpoint, "x_best.npy"))  # load previous run
     genotype[:-8] = prev_best
 
-    genotype[-8::2] = ...  # fix upper leg length 0.2m
-    genotype[-7::2] = ...     # fix lower leg length 0.6m
+    genotype[-8::2] = -0.6  # fix upper leg length 0.2
+    genotype[-7::2] = 1  # fix lower leg length 0.6
     world.update_robot_xml(genotype)
     world.visualise_individual(genotype)
 
@@ -514,7 +521,7 @@ def main():
     world.n_params = world.n_weights + world.n_body_params
     n_parameters = world.n_params
     population_size = 150
-    opts = CMAES_opts.copy()
+    opts = {}
     opts["min"] = -1
     opts["max"] = 1
     opts["mutation_sigma"] = 0.3
@@ -547,15 +554,15 @@ def main():
     n_parameters = world.n_params
     print("Number of parameters:", n_parameters)
     print("Number of weights:", world.n_weights)
-    population_size = 100
+    population_size = 250
 
     opts = {}
     opts["min"] = -1
     opts["max"] = 1
-    opts["num_parents"] = population_size//2
-    opts["num_generations"] = 50
-    opts["mutation_prob"] = 0.2
-    opts["crossover_prob"] = 0.5
+    opts["num_parents"] = population_size
+    opts["num_generations"] = 100
+    opts["mutation_prob"] = 0.3
+    opts["crossover_prob"] = 0.9
 
     results_dir = join(ROOT_DIR, "results", ENV_NAME, "multi")
     ea_multi_obj = NSGAII(population_size,
@@ -579,4 +586,30 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    np.random.seed(42)
+    world = AntWorld()
+    print(f"n_params={world.n_params}  n_weights={world.n_weights}  n_body={world.n_body_params}")
+
+    population_size = 6
+    results_dir = join(ROOT_DIR, "results", ENV_NAME, "test_multi")
+
+    ea = NSGAII(
+        population_size=population_size,
+        n_opt_params=world.n_params,
+        n_parents=population_size,
+        num_generations=2,
+        bounds=(-1, 1),
+        mutation_prob=0.3,
+        crossover_prob=0.5,
+        output_dir=results_dir,
+    )
+
+    # print("\n--- Running 2 generations of NSGA-II ---")
+    # run_EA_multi(ea, world)
+
+    print("\n--- Calling evaluate_checkpoint (2 episodes) ---")
+    evaluate_checkpoint(
+        checkpoint_dir=results_dir,
+        output_dir=join(results_dir, "eval"),
+        n_episodes=2,
+    )
