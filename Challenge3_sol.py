@@ -50,7 +50,7 @@ class AntWorld(World):
         #                                     output_size=action_space,
         #                                     hidden_size=action_space,)
         self.n_weights = self.controller.n_params
-        self.n_body_params = 8
+        self.n_body_params = 2
 
         self.n_params = self.n_weights + self.n_body_params
         self.temp_dir = TemporaryDirectory()
@@ -101,13 +101,22 @@ class AntWorld(World):
     def geno2pheno(self, genotype):
         control_weights = genotype[:self.n_weights]*0.1
         body_params = (genotype[self.n_weights:]+1)/4+0.1
-        assert len(body_params) == self.n_body_params
         assert len(control_weights) == self.n_weights
         assert not np.any(body_params <= 0)
 
         self.controller.geno2pheno(control_weights)
 
-        front_left_leg, front_left_ankle, front_right_leg, front_right_ankle, back_left_leg, back_left_ankle, back_right_leg, back_right_ankle, = body_params
+        if len(body_params) == 2:
+            upper_leg, lower_leg = body_params
+        elif len(body_params) == 8:
+            upper_leg = np.mean(body_params[::2])
+            lower_leg = np.mean(body_params[1::2])
+        else:
+            raise ValueError(
+                f"Unsupported body genotype length {len(body_params)}; expected 2 or 8."
+            )
+        front_left_leg = front_right_leg = back_left_leg = back_right_leg = upper_leg
+        front_left_ankle = front_right_ankle = back_left_ankle = back_right_ankle = lower_leg
 
         # Define the 3D coordinates of the relative tree structure
         front_left_hip_xyz = np.array([0.2, 0.2, 0])
@@ -214,8 +223,11 @@ class AntWorld(World):
             # TODO: design appropriate rewards
             rewards_full[step, ~done_mask] = rewards[~done_mask]
 
-            # TODO: design appropriate moo-rewards
-            multi_obj_reward = np.array([infos["reward_forward"]+infos["healthy_reward"], -infos["ctrl_cost"]]).T # TODO
+            # Objective 2 follows the original challenge definition.
+            multi_obj_reward = np.array([
+                infos["reward_forward"] + infos["healthy_reward"],
+                -infos["ctrl_cost"],
+            ]).T
             multi_obj_rewards_full[step, ~done_mask] = multi_obj_reward[~done_mask]
 
             # Update the done mask based on the "done" and "truncated" flags
@@ -476,12 +488,12 @@ def run_EA_single(ea_single, world):
         ea_single.tell(pop, fitnesses_gen, save_checkpoint=True)
 
 
-def run_EA_multi(ea_multi, world):
+def run_EA_multi(ea_multi, world, n_repeats=10, n_steps=500):
     for _ in trange(ea_multi.n_gen):
         pop = ea_multi.ask()
         fitnesses_gen = np.empty((len(pop), 2))
         for index, genotype in enumerate(pop):
-            _, fit_ind = world.evaluate_individual(genotype)
+            _, fit_ind = world.evaluate_individual(genotype, n_repeats=n_repeats, n_steps=n_steps)
             fitnesses_gen[index] = fit_ind
         ea_multi.tell(pop, fitnesses_gen, save_checkpoint=True)
 
@@ -510,8 +522,7 @@ def main():
     prev_best = np.load(join(results_dir, checkpoint, "x_best.npy"))  # load previous run
     genotype[:-8] = prev_best
 
-    genotype[-8::2] = -0.6  # fix upper leg length 0.2
-    genotype[-7::2] = 1  # fix lower leg length 0.6
+    genotype[-2:] = np.array([-0.6, 1.0])  # fix symmetric upper/lower leg lengths
     world.update_robot_xml(genotype)
     world.visualise_individual(genotype)
 
@@ -590,26 +601,33 @@ if __name__ == "__main__":
     world = AntWorld()
     print(f"n_params={world.n_params}  n_weights={world.n_weights}  n_body={world.n_body_params}")
 
-    population_size = 6
-    results_dir = join(ROOT_DIR, "results", ENV_NAME, "test_multi")
+    population_size = 16
+    num_generations = 20
+    mutation_prob = 0.2
+    crossover_prob = 0.95
+    eval_repeats = 4
+    eval_steps = 300
+    results_dir = join(ROOT_DIR, "results", ENV_NAME, "multi_sym_tuned")
 
     ea = NSGAII(
         population_size=population_size,
         n_opt_params=world.n_params,
         n_parents=population_size,
-        num_generations=2,
+        num_generations=num_generations,
         bounds=(-1, 1),
-        mutation_prob=0.3,
-        crossover_prob=0.5,
+        mutation_prob=mutation_prob,
+        crossover_prob=crossover_prob,
         output_dir=results_dir,
     )
+    ea.directory_name = results_dir
 
-    # print("\n--- Running 2 generations of NSGA-II ---")
-    # run_EA_multi(ea, world)
+    os.makedirs(results_dir, exist_ok=True)
+    print(f"\n--- Running NSGA-II for {num_generations} generations in {results_dir} ---")
+    run_EA_multi(ea, world, n_repeats=eval_repeats, n_steps=eval_steps)
 
-    print("\n--- Calling evaluate_checkpoint (2 episodes) ---")
+    print("\n--- Evaluating latest checkpoint (8 episodes) ---")
     evaluate_checkpoint(
         checkpoint_dir=results_dir,
         output_dir=join(results_dir, "eval"),
-        n_episodes=2,
+        n_episodes=8,
     )
