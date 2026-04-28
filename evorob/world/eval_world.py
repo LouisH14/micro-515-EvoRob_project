@@ -15,7 +15,10 @@ from evorob.world.robot.morphology.ant_custom_robot import AntRobot
 
 ROOT_DIR = get_project_root()
 _EVAL_TERRAIN_XML = join(
-    ROOT_DIR, "evorob", "world", "envs", "assets", "eval_terrain.xml"
+    ROOT_DIR, "evorob", "world", "robot", "assets", "eval_terrain.xml"
+)
+_EVAL_TERRAIN_IMAGE = join(
+    ROOT_DIR, "evorob", "world", "robot", "assets", "hilly_hfield.png"
 )
 
 
@@ -96,10 +99,13 @@ class EvalWorld(World):
 
         Args:
             final_body_path: Absolute path to the student's robot body XML
-                             (e.g. the AntRobot.xml written by FinalWorld).
+                             (e.g. the AntRobot.xml written by FinalWorld). Must be an absolute path since the world XML will include it with a relative path.
         """
         robot_filename = basename(final_body_path)
-        shutil.copy2(final_body_path, join(self.temp_dir.name, robot_filename))
+        robot_dest_path = join(self.temp_dir.name, robot_filename)
+        if os.path.abspath(final_body_path) != os.path.abspath(robot_dest_path):
+            shutil.copy2(final_body_path, robot_dest_path)
+        shutil.copy2(_EVAL_TERRAIN_IMAGE, join(self.temp_dir.name, basename(_EVAL_TERRAIN_IMAGE)))
 
         world = xml.parse(_EVAL_TERRAIN_XML)
         robot_env = world.getroot()
@@ -196,12 +202,7 @@ class EvalWorld(World):
         robot.xml = robot.define_robot()
         robot.write_xml(self.temp_dir.name)  # → AntRobot.xml in temp dir
 
-        # Combine terrain template + robot include → self.world_file
-        world = xml.parse(_EVAL_TERRAIN_XML)
-        root = world.getroot()
-        root.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
-        with open(self.world_file, "w") as f:
-            f.write(xml.tostring(root, encoding="unicode"))
+        self.update_robot_xml(join(self.temp_dir.name, "AntRobot.xml"))
 
         # Load controller (passes controller slice directly to geno2pheno)
         self.geno2pheno(genotype)

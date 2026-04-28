@@ -194,17 +194,31 @@ class FinalWorld(World):
             with open(world_file, "w") as f:
                 f.write(xml.tostring(root, encoding="unicode"))
 
-    def _create_terrain_file(self, filename: str, width: int = 400, depth: int = 400):
-        """Generate a procedural heightmap PNG for the hill terrain."""
-        slope_deg, bump_scale, sigma = 5.0, 0.1, 3.0
+    def _create_terrain_file(self, filename: str, width: int = 200, depth: int = 400):
+        """Hill terrain PNG: smooth start, bumpy middle, smooth end."""
+        slope_deg = 5.0
+        bump_scale = 0.08
+        sigma = 4.0
+
         rise = np.tan(np.deg2rad(slope_deg))
-        X, _ = np.meshgrid(np.linspace(0, 1, depth), np.linspace(0, 1, width))
-        rng   = np.random.default_rng(42)
+        x = np.linspace(0, 1, depth)
+        y = np.linspace(0, 1, width)
+        X, Y = np.meshgrid(x, y)
+
+        # Smooth slope: starts flat, gradually rises
+        slope_map = np.clip(X * rise, 0, 1)
+
+        # Bell-shaped envelope: smooth at both ends, bumpy in the middle
+        rng = np.random.default_rng(42)
         noise = rng.uniform(0, 1, (width, depth))
+        bump_envelope = np.sin(np.pi * X)  # 0 at start, peaks at mid, 0 at end
         noise = scipy.ndimage.gaussian_filter(noise, sigma=sigma)
-        noise = (noise - noise.min()) / (noise.max() - noise.min()) * np.tanh(X * 10)
-        terrain = np.clip(X * rise + noise * bump_scale, 0, 1)
-        terrain[-1, -1] = 1
+        noise = (noise - noise.min()) / (noise.max() - noise.min()) * bump_envelope
+        noise_map = noise * bump_scale
+
+        terrain = np.clip(slope_map + noise_map, 0, 1)
+        terrain[-1, -1] = 1  # ensure max value for normalization
+
         img = Image.fromarray((terrain * 255).astype(np.uint8), mode="L")
         img.save(join(self.temp_dir.name, filename))
 
@@ -486,9 +500,9 @@ def run_multi_task_evolution(
 if __name__ == "__main__":
     # Quick smoke-test — 2 generations, tiny population
     run_multi_task_evolution(
-        num_generations=2,
-        population_size=6,
-        n_parents=6,
+        num_generations=100,
+        population_size=32,
+        n_parents=32,
         n_repeats=2,
         n_steps=100,
         ckpt_interval=1,
