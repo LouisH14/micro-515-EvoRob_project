@@ -37,7 +37,7 @@ and geometric matrix manipulation.
 The **EA** handles the evolutionary process. These back-end functionalities are separated as a Python class (see overview below). More information about classes can be found here: [https://docs.python.org/3/tutorial/classes.html](https://docs.python.org/3/tutorial/classes.html). The **EA** class is a general description of our evolutionary algorithm, providing the core routines for our evolutionary process, such as the generation of new populations and the mutation of our genotype.  
 Concrete algorithms designed by you have to follow this convention to interface with the **World** and our population. These class functions should be customized for different implementations of **EA**s. The dots indicate the possibility of custom functions that are specific for your implementation (for example ES requires additional mutation functions for you to plug in).  For convenience, we also add utility functions like the loading and saving of checkpoints or logging of current fitness.
 
-```
+```python
 class EA():
 
     def __init__(self, n_pop, n_params, opts: dict = EA_opts, output_dir: str = "./results"):
@@ -71,7 +71,7 @@ class EA():
 The **World** handles the computation of the fitness per individual. The **World** translates a vector of numbers to a phenotype (e.g. a vector of numbers
 representing segment lengths \-genotype- are translated into a robot \-phenotype-), which is used to evaluate an individual . Evaluation results  in
 a fitness value(s), which is sent to the **EA**. For each exercise, the class functions should be customized for different implementations of **World**s.
-```
+```python
 class World():
 
     def __init__(self):
@@ -118,7 +118,7 @@ The corresponding sections in the code are indicated with `#TODO`s.
 **How:** Integrate the previous exercises for body and brain co-evolution.  
 **Short description:** In this challenge, we adapt both body and brain by optimizing leg-length and different controller parameters. Here, we compare different control strategies: open-loop vs. feed-back vs. adaptive feed-back control and analyse how these impact morphological changes. 
 
-### [Final Presentation](doc/final.md) (23.04.2026 \- **deadline**: T.B.A)
-**Goal:** Full robot evolution.  
-**How:** Evolve a robot to conquer all previous environments, and a mystery terrain given at the end.  
-**Short description:** This is the final project which you will present in a (**graded**) poster session. We highly encourage you to adapt the EvoRob codebase and improve the current setup. Creativity is rewarded.
+### [Final project](doc/final.md) (23.04.2026 - 21.05.2026)
+**Goal:** Evolve a single robot to perform well across all three training environments at once.  
+**How:** Design your own multi-task evolutionary experiment using the pipeline from the previous challenges.  
+**Short description:** This is the final project which you will present in a (**graded**) poster session. Define a research question, design your experiment, and analyze your solution(s). Creativity is rewarded.
