@@ -16,6 +16,7 @@ evolved robot on it using final_project_test.py — it is not trained on.
 """
 
 import os
+import shutil
 import xml.etree.ElementTree as xml
 from os.path import join
 from tempfile import TemporaryDirectory
@@ -178,10 +179,10 @@ class FinalWorld(World):
         points, connectivity_mat = self.geno2pheno(genotype)
         robot = AntRobot(
             points, connectivity_mat, self.joint_limits, self.joint_axis,
-            verbose=False,
+            name="Robot", verbose=False,
         )
         robot.xml = robot.define_robot()
-        robot.write_xml(self.temp_dir.name)          # → AntRobot.xml
+        robot.write_xml(self.temp_dir.name)          # → Robot.xml
 
         for template, world_file in [
             (join(_ASSETS, "flat_world.xml"), self.flat_world_file),
@@ -190,7 +191,7 @@ class FinalWorld(World):
         ]:
             tree = xml.parse(template)
             root = tree.getroot()
-            root.append(xml.Element("include", attrib={"file": "AntRobot.xml"}))
+            root.append(xml.Element("include", attrib={"file": "Robot.xml"}))
             with open(world_file, "w") as f:
                 f.write(xml.tostring(root, encoding="unicode"))
 
@@ -345,11 +346,10 @@ def evaluate_checkpoint(
         return dict(mean=float(arr.mean()), std=float(arr.std()),
                     best=float(arr.max()), worst=float(arr.min()), values=values)
 
-    def _run(env_id: str, world_file: str, terrain_name: str) -> list:
+    def _run(env_id: str, world_file: str) -> list:
         rng = np.random.default_rng(SEED)
         env = gym.make(env_id, robot_path=world_file, max_episode_steps=MAX_STEPS)
         rewards = []
-        print(f"  [{terrain_name}]  {n_episodes} episodes:")
         for ep in range(n_episodes):
             world.controller.reset_controller(batch_size=1)
             obs, _ = env.reset(seed=int(rng.integers(0, 2 ** 31)))
@@ -362,7 +362,6 @@ def evaluate_checkpoint(
                 total += _neutral(info)
                 done = terminated or truncated
             rewards.append(total)
-            print(f"    episode {ep + 1:3d}/{n_episodes}: {total:10.2f}")
         env.close()
         return rewards
 
@@ -393,11 +392,29 @@ def evaluate_checkpoint(
     results = {}
 
     for terrain_name, (env_id, world_file) in terrains.items():
-        rewards = _run(env_id, world_file, terrain_name)
-        results[terrain_name] = _stats(rewards)
-        r = results[terrain_name]
-        print(f"  → mean={r['mean']:8.2f} ± {r['std']:7.2f}"
-              f"  best={r['best']:8.2f}  worst={r['worst']:8.2f}\n")
+        print(f"  Running {terrain_name}  ({n_episodes} episodes)...", flush=True)
+        results[terrain_name] = _stats(_run(env_id, world_file))
+
+    # Per-episode 3-column table
+    t_names = list(results.keys())
+    col_w = 12
+    hdr = f"  {'Ep':>4}   " + "   ".join(f"{n.capitalize():>{col_w}}" for n in t_names)
+    sep = "  " + "-" * (len(hdr) - 2)
+    print(hdr)
+    print(sep)
+    for ep in range(n_episodes):
+        row = f"  {ep + 1:>4}   " + "   ".join(
+            f"{results[n]['values'][ep]:>{col_w}.2f}" for n in t_names
+        )
+        print(row)
+    print(sep)
+    print(f"  {'mean':>4}   " + "   ".join(
+        f"{results[n]['mean']:>{col_w}.2f}" for n in t_names
+    ))
+    print(f"  {'std':>4}   " + "   ".join(
+        f"{results[n]['std']:>{col_w}.2f}" for n in t_names
+    ))
+    print()
 
     # --- Record one video per terrain ---
     print("Recording videos...")
@@ -487,6 +504,10 @@ def run_multi_task_evolution(
     print(f"Objectives : [flat, ice, hill]")
     print(f"Checkpoints: {results_dir}\n")
 
+    os.makedirs(results_dir, exist_ok=True)
+    _best_xml_stage = join(results_dir, "_best_robot.xml")  # staging copy of best robot
+    _best_scalar = -np.inf
+
     for gen in range(num_generations):
         pop = ea.ask()
         fitnesses = np.empty((len(pop), n_obj))
@@ -494,7 +515,40 @@ def run_multi_task_evolution(
             fitnesses[idx] = world.evaluate_individual(
                 genotype, n_repeats=n_repeats, n_steps=n_steps
             )
-        ea.tell(pop, fitnesses, save_checkpoint=(gen % ckpt_interval == 0))
+            scalar = float(fitnesses[idx].sum())
+            if scalar > _best_scalar:
+                _best_scalar = scalar
+                shutil.copy2(
+                    join(world.temp_dir.name, "Robot.xml"),
+                    _best_xml_stage,
+                )
+        save_ckpt = (gen % ckpt_interval == 0)
+        ea.tell(pop, fitnesses, save_checkpoint=save_ckpt)
+        if save_ckpt:
+            shutil.copy2(
+                _best_xml_stage,
+                join(results_dir, str(gen), "Robot.xml"),
+            )
+
+    # --- Training summary ---
+    best_f = ea.f_best_so_far  # shape (3,) for NSGA-II
+    score_path = join(results_dir, "training_score.txt")
+    with open(score_path, "w") as f:
+        f.write("=" * 60 + "\n")
+        f.write("MICRO-515 Final Project — Training Summary\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(f"Generations     : {num_generations}\n")
+        f.write(f"Population size : {population_size}\n")
+        f.write(f"Controller      : {type(world.controller).__name__}"
+                f"  ({world.n_weights} params)\n")
+        f.write(f"Genotype size   : {world.n_params}"
+                f"  (controller={world.n_weights}, body={world.n_body_params})\n\n")
+        f.write("Best individual (highest sum of objectives):\n")
+        labels = ["flat", "ice", "hill"]
+        for label, val in zip(labels, best_f):
+            f.write(f"  {label:<6}: {float(val):10.2f}\n")
+        f.write(f"  {'sum':<6}: {float(best_f.sum()):10.2f}\n")
+    print(f"\nTraining summary saved to: {score_path}")
 
 
 if __name__ == "__main__":
