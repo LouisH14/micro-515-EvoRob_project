@@ -20,12 +20,12 @@ Quick-start (recommended)
 --------------------------
     python final_project_test.py --best_dir_path results/final_project
 
-The directory must contain x_best.npy (and ideally AntRobot.xml).
+The directory must contain x_best.npy (and ideally Robot.xml).
 If you used a non-default controller, also set MY_CONTROLLER below.
 
 Option B — supply files manually
 ----------------------------------
-Set ROBOT_XML_PATH to your saved AntRobot.xml  AND
+Set ROBOT_XML_PATH to your saved Robot.xml  AND
     GENOTYPE_PATH  to the matching x_best.npy,
 then set MY_CONTROLLER if needed.
 
@@ -68,10 +68,10 @@ MY_CONTROLLER = None
 
 # --- Paths ---
 # Option A: directory that contains x_best.npy (recommended)
-CHECKPOINT_DIR = "results/final_test"
+CHECKPOINT_DIR = "results/final_project"
 
 # Option B: provide the robot XML and genotype as separate files
-ROBOT_XML_PATH = None   # e.g. "/abs/path/to/AntRobot.xml"
+ROBOT_XML_PATH = None   # e.g. "/abs/path/to/Robot.xml"
 GENOTYPE_PATH  = None   # e.g. "/abs/path/to/x_best.npy"
 
 # --- Output ---
