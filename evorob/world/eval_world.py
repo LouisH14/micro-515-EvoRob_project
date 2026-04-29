@@ -134,77 +134,40 @@ class EvalWorld(World):
     # ------------------------------------------------------------------
 
     def load_from_checkpoint(self, checkpoint_dir: str) -> None:
-        """Regenerate robot and load controller from a FinalWorld checkpoint.
+        """Load robot XML and controller weights from a FinalWorld checkpoint.
 
-        Finds x_best.npy, rebuilds AntRobot.xml from the body parameters,
-        runs update_robot_xml, and loads the controller weights.
+        Searches for AntRobot.xml and x_best.npy in the last checkpoint
+        generation directory, then falls back to checkpoint_dir itself.
+        Works for any body representation — does not assume a fixed genotype structure.
 
         Args:
             checkpoint_dir: Path to your results directory (e.g. results/final_project).
         """
         last_gen = get_last_checkpoint_dir(checkpoint_dir)
+        search_dirs = ([last_gen] if last_gen else []) + [checkpoint_dir]
 
-        def _load(fname):
-            for d in ([last_gen] if last_gen else []) + [checkpoint_dir]:
+        def _find(fname):
+            for d in search_dirs:
                 p = join(d, fname)
                 if isfile(p):
-                    return np.load(p, allow_pickle=True)
+                    return p
             return None
 
-        genotype = _load("x_best.npy")
-        if genotype is None:
+        genotype_path = _find("x_best.npy")
+        if genotype_path is None:
             raise FileNotFoundError(f"x_best.npy not found in: {checkpoint_dir}")
+        genotype = np.load(genotype_path, allow_pickle=True)
         print(f"Loaded genotype: shape={genotype.shape}")
 
-        # Rebuild robot body from genotype body parameters
-        body_params = (genotype[self.n_weights:] + 1) / 4 + 0.1
-        assert len(body_params) == self.n_body_params
+        xml_path = _find("Robot.xml")
+        if xml_path is None:
+            raise FileNotFoundError(
+                f"Robot.xml not found in: {checkpoint_dir}\n"
+                "Re-run training with the updated pipeline to save the XML alongside checkpoints."
+            )
+        print(f"Loaded robot XML: {xml_path}")
+        self.update_robot_xml(xml_path)
 
-        def knee(hip, dx, dy, length):
-            return hip + np.array([dx, dy, 0.0]) * np.sqrt(0.5 * length ** 2)
-
-        fl_hip = np.array([0.2, 0.2, 0]);   fr_hip = np.array([-0.2, 0.2, 0])
-        bl_hip = np.array([-0.2, -0.2, 0]); br_hip = np.array([0.2, -0.2, 0])
-
-        fl_leg, fl_ankle, fr_leg, fr_ankle, bl_leg, bl_ankle, br_leg, br_ankle = body_params
-
-        fl_knee = knee(fl_hip, 1, 1, fl_leg);    fl_toe = knee(fl_knee, 1, 1, fl_ankle)
-        fr_knee = knee(fr_hip, -1, 1, fr_leg);   fr_toe = knee(fr_knee, -1, 1, fr_ankle)
-        bl_knee = knee(bl_hip, -1, -1, bl_leg);  bl_toe = knee(bl_knee, -1, -1, bl_ankle)
-        br_knee = knee(br_hip, 1, -1, br_leg);   br_toe = knee(br_knee, 1, -1, br_ankle)
-
-        points = np.vstack([
-            fl_hip, fl_knee, fl_toe,
-            fr_hip, fr_knee, fr_toe,
-            bl_hip, bl_knee, bl_toe,
-            br_hip, br_knee, br_toe,
-        ])
-        connectivity_mat = np.array([
-            [150, np.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 150, np.inf, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 150, np.inf, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 150, np.inf, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 150, np.inf, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 150, np.inf, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 150, np.inf, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 150, np.inf, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ])
-
-        robot = AntRobot(
-            points, connectivity_mat,
-            self.joint_limits, self.joint_axis,
-            verbose=False,
-        )
-        robot.xml = robot.define_robot()
-        robot.write_xml(self.temp_dir.name)  # → AntRobot.xml in temp dir
-
-        self.update_robot_xml(join(self.temp_dir.name, "AntRobot.xml"))
-
-        # Load controller (passes controller slice directly to geno2pheno)
         self.geno2pheno(genotype)
 
     # ------------------------------------------------------------------
