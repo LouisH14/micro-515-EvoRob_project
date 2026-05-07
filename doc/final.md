@@ -2,8 +2,8 @@
 # Final Project: Multi-Task Robot Evolution
 
 **Goal:** Evolve a single robot — body and controller — that can walk across all three training environments at once.  
-**How:** Design your own evolutionary experiment using the pipeline you built in the previous challenges.
-
+**How:** Design your own evolutionary experiment using the pipeline you built in the previous challenges
+ 
 ---
 
 <div align="center">
