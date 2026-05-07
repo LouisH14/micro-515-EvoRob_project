@@ -190,7 +190,7 @@ class AntRobot:
             attrib={
                 "name": "track",
                 "mode": "trackcom",
-                "pos": "0 -3 0.3",
+                "pos": "0 -6 0.6",
                 "xyaxes": "1 0 0 0 0 1",
             },
         )
@@ -207,6 +207,7 @@ class AntRobot:
                     "type": "capsule",
                     "fromto": f"{0} {0} {0} {segment_cog[0]} {segment_cog[1]} {segment_cog[2]}",
                     "size": self.properties["rods"]["size"],
+                    "rgba": self.properties["rods"]["rgba"],
                 },
             )
             for segment in segments:
@@ -233,7 +234,7 @@ class AntRobot:
                         "fromto": f"{-rel_xyz[0]} {-rel_xyz[1]} {-rel_xyz[2]} {rel_xyz[0]} {rel_xyz[1]} {rel_xyz[2]}",
                         "size": self.properties["rods"]["size"],
                         "name": rod_name.replace("rod", "geom"),
-                        # "rgba": self.properties["rods"]["rgba"],
+                        "rgba": self.properties["rods"]["rgba"],
                         # "density": self.properties["rods"]["density"],
                         # "condim": self.properties["rods"]["condim"],
                         # "friction": self.properties["rods"]["friction"],
@@ -370,7 +371,7 @@ def default_setting(props=properties):
             "density": props["geom"]["density"],
             "friction": props["geom"]["friction"],
             "margin": props["geom"]["margin"],
-            "rgba": props["geom"]["rgba"],
+            # "rgba": props["geom"]["rgba"],
         },
     )
 
